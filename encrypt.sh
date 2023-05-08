@@ -17,8 +17,17 @@ if [ "$passphrase" != "$passphrase_confirm" ]; then
   exit 1
 fi
 
-# Cifra tutti i file nella directory specificata come input
 for file in "$1"/*; do
-  gpg --symmetric --batch --passphrase "$passphrase" --cipher-algo AES256 "$file"
+
+  # cifra il file di input con AES-256-CBC
+  filename=$(basename "$file")
+  openssl enc -aes-256-cbc -base64 -md sha512 -pbkdf2 -salt -in "$file" -out "$1/${filename%.*}.aes" -k "$passphrase"
+  echo "Encrypted $filename"
+
+  # calcola il digest SHA-512 sulla concatenazione del file e della passphrase
+  contenuto_file="$(cat "$file")---$passphrase"
+  hash512=$(echo -n "$contenuto_file" | openssl dgst -sha512 -binary | base64)
+  echo "$hash512" > "$1/${filename%.*}.sha512"
   rm "$file"
+
 done
